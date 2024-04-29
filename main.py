@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.express as px
+from analysis import analyse_connections, analyse_messages, analyse_invitations
 
 # Function to load and concatenate multiple CSV files
 @st.cache_data
@@ -17,11 +18,6 @@ def load_data(uploaded_files):
             continue
         data_frames[key] = df
     return data_frames
-
-# Function to perform analysis (modify this based on the actual analysis needed)
-def analyze_connections(data):
-    # Example analysis: Get summary statistics
-    return data.describe()
 
 # Streamlit app
 def main():
