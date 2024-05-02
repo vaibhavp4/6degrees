@@ -2,6 +2,22 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from analysis import analyse_connections, analyse_messages, analyse_invitations, count_messages, add_connection_direction
+from langchain_experimental.agents import create_pandas_dataframe_agent
+import os
+from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
+
+# Load the .env file
+load_dotenv()
+
+api_key = os.getenv("OPENAI_API_KEY")
+if api_key is None:
+    raise ValueError("OPENAI_API_KEY is not set in the .env file.")
+else:
+    os.environ["OPENAI_API_KEY"] = api_key  # Set the API key in os.environ if not already set
+
+llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
+
 
 @st.cache_data
 def load_data(uploaded_files):
@@ -37,6 +53,7 @@ def main():
     """
     st.title('6degrees network analysis')
 
+    st.subheader('Upload your linkedin data to get started!')
     # Allows user to upload multiple CSV files for analysis
     uploaded_files = st.file_uploader("Choose CSV files", accept_multiple_files=True, type='csv')
     if uploaded_files:
@@ -44,80 +61,42 @@ def main():
         
         st.header("Let's unlock your professional network!")
 
-
-    # Initialize the session state variables if not already present
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-    if "current_step" not in st.session_state:
-        st.session_state.current_step = 1  # Start at the first question
-
-    # Function to handle adding chat messages to the history and displaying them
-    def add_and_display_message(role, content):
-        st.session_state.messages.append({"role": role, "content": content})
-        for message in st.session_state.messages:
-            with st.chat_message(message['role']):
-                st.markdown(message['content'])
-
-    # Display previous messages
-    for message in st.session_state.messages:
-        with st.chat_message(message['role']):
-            st.markdown(message['content'])
-
-    # Manage the conversation steps
-    if st.session_state.current_step == 1:
-        objective = st.chat_input("What's your objective?")
-        if objective:
-            add_and_display_message("user", objective)
-            add_and_display_message("assistant", "Thanks! Let's learn more about it.")
-            st.session_state.current_step += 1
-
-    elif st.session_state.current_step == 2:
-        icp = st.chat_input("Describe your ICP/target market.")
-        if icp:
-            add_and_display_message("user", icp)
-            add_and_display_message("assistant", "Great! Let's refine it further.")
-            st.session_state.current_step += 1
-
-    elif st.session_state.current_step == 3:
-        industry = st.chat_input("Which industries are you interested in?")
-        if industry:
-            add_and_display_message("user", industry)
-            add_and_display_message("assistant", "Perfect! Click analyse to unlock the best opportunities.")
-            st.session_state.current_step += 1  # Adjust this if there are more steps
-
+   
         
+        tab1, tab2, tab3 = st.tabs(["Connections", "Messages", "Invitations"])
+        
+        with tab1:
+            graphs = analyse_connections(data_frames['connections'])
+            for title, graph in graphs.items():
+                st.plotly_chart(graph, use_container_width=True)
+        
+        with tab2:
+            st.write("Insights for Graph 2 based on analysis")
+            
+        
+        with tab3:
+            st.write("Insights for Graph 3 based on analysis")
+
+        if "invitations" in data_frames:
+            connections = add_connection_direction(data_frames['connections'], data_frames['invitations'])
+        
+        if "messages" in data_frames:
+            messages_count = count_messages(data_frames['messages'])
+
+        connections =  pd.merge(connections, messages_count, left_on='URL', right_on='URL', how='left')
+        connections['Count'] = connections['Count'].fillna(0)
+
+        objective = st.text_input("What do you want to know?", "E.g. Which connections could introduce me to banking industry?")
         if st.button("Analyze"):
-            # Placeholder for future function to tailor analysis based on user input
-            # TODO: 
-            # Implement a function to convert the onboarding responses context and analysis goals for tabs
-            
 
-            if "invitations" in data_frames:
-                connections = add_connection_direction(data_frames['connections'], data_frames['invitations'])
+            agent = create_pandas_dataframe_agent(llm, connections, agent_type="openai-tools", verbose=True)
             
-            if "messages" in data_frames:
-                messages_count = count_messages(data_frames['messages'])
-                st.table(messages_count.head(3))
-
-            connections =  pd.merge(connections, messages_count, left_on='URL', right_on='URL', how='left')
-            connections['Count'] = connections['Count'].fillna(0)
-
-            st.table(connections.sort_values(by='Count', ascending=False).head(3))
-            
-            # Setting up tabs for different insights and visualizations
-            tab1, tab2, tab3 = st.tabs(["Connections", "Messages", "Invitations"])
-            
-            with tab1:
-                graphs = analyse_connections(data_frames['connections'])
-                for title, graph in graphs.items():
-                    st.plotly_chart(graph, use_container_width=True)
-            
-            with tab2:
-                st.write("Insights for Graph 2 based on analysis")
-                
-            
-            with tab3:
-                st.write("Insights for Graph 3 based on analysis")
+            output = agent.invoke(
+                {
+                    "input": objective
+                }
+            )
+            st.write(output)           
                 
 
 if __name__ == "__main__":
