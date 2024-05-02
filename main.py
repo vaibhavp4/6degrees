@@ -5,6 +5,10 @@ import matplotlib.pyplot as plt
 from analysis import analyse_connections, analyse_messages, analyse_invitations, count_messages, add_connection_direction
 from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain_community.llms import VertexAI
+import base64
+import vertexai
+from vertexai.generative_models import GenerativeModel, Part, FinishReason
+import vertexai.preview.generative_models as generative_models
 
 llm = VertexAI(model_name="gemini-1.5-pro-preview-0409", temperature=0.2)
 
@@ -74,8 +78,6 @@ def main():
         if "connections" in data_frames:
 
             st.header("Let's unlock your professional network!")
-
-
             
             tab1, tab2, tab3 = st.tabs(["Connections", "Messages", "Invitations"])
             
@@ -101,8 +103,50 @@ def main():
             connections['Count'] = connections['Count'].fillna(0)
 
             objective = st.text_input("What do you want to know?", "E.g. Which connections could introduce me to banking industry?")
+            
             if st.button("Analyze"):
 
+                
+
+                def generate():
+                    vertexai.init(project="snappy-topic-422116-h1", location="europe-west2")
+                    model = GenerativeModel("gemini-1.5-pro-preview-0409")
+                    responses = model.generate_content(
+                        [text1],
+                        generation_config=generation_config,
+                        safety_settings=safety_settings,
+                        stream=True,
+                    )
+
+                    for response in responses:
+                        st.write(response.text, end="")
+
+                text1 = """We have access to LinkedIn connections of a user. Our goal is to help the user get meaningful insights based on their request.
+
+                Here is their request:current role: Foundercurrent objective: To get new clientsIdeal customer profile: Ed-tech companies
+
+                Suggest 3 questions or insights areas that we can explore from their LinkedIn data to help them achieve their objective
+
+                Here are the rules:- The questions should be precise and non-overlapping- The questions should be answerable by analysing only the CSV containing the following columns: First Name, Last Name, URL, Email Address, Company, Position, Connected On, Messages count, Team, Industry"""
+
+                generation_config = {
+                    "max_output_tokens": 8192,
+                    "temperature": 0.7,
+                    "top_p": 0.95,
+                }
+
+                safety_settings = {
+                    generative_models.HarmCategory.HARM_CATEGORY_HATE_SPEECH: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                    generative_models.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                    generative_models.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                    generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                }
+
+                generate()
+
+
+                
+                '''
                 agent = create_pandas_dataframe_agent(llm, connections, agent_type="openai-tools", verbose=True)
                 
                 output = agent.invoke(
@@ -110,7 +154,8 @@ def main():
                         "input": objective
                     }
                 )
-                st.write(output)           
+                st.write(output) 
+                '''          
                 
 
 if __name__ == "__main__":
