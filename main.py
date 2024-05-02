@@ -10,6 +10,20 @@ import vertexai
 from vertexai.generative_models import GenerativeModel, Part, FinishReason
 import vertexai.preview.generative_models as generative_models
 
+from google.oauth2 import service_account
+import json
+
+# Initialize Google Cloud credentials
+def init_google_credentials():
+    creds_json = json.loads(st.secrets["google_credentials"])
+    credentials = service_account.Credentials.from_service_account_info(creds_json)
+    return credentials
+
+# Use credentials in VertexAI or other Google Cloud services
+credentials = init_google_credentials()
+vertexai.init(project="snappy-topic-422116-h1",  location="europe-west2", credentials=credentials)
+
+
 llm = VertexAI(model_name="gemini-1.5-pro-preview-0409", temperature=0.2)
 
 if "messages" not in st.session_state:
