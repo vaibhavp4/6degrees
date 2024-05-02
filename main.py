@@ -4,17 +4,19 @@ import matplotlib.pyplot as plt
 from analysis import analyse_connections, analyse_messages, analyse_invitations, count_messages, add_connection_direction
 from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain_openai import ChatOpenAI
-#import os
-#from dotenv import load_dotenv
 
-# Load the .env file
-#load_dotenv()
-# api_key = os.getenv("OPENAI_API_KEY")
-#if api_key is None:
-#    raise ValueError("OPENAI_API_KEY is not set in the .env file.")
-#else:
-#    os.environ["OPENAI_API_KEY"] = api_key  # Set the API key in os.environ if not already set
+""" 
+import os
+from dotenv import load_dotenv
 
+#Load the .env file
+load_dotenv()
+api_key = os.getenv("OPENAI_API_KEY")
+if api_key is None:
+    raise ValueError("OPENAI_API_KEY is not set in the .env file.")
+else:
+    os.environ["OPENAI_API_KEY"] = api_key  # Set the API key in os.environ if not already set
+ """
 llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
 
 
