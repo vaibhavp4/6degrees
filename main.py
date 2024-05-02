@@ -1,23 +1,12 @@
 import streamlit as st
+import io
 import pandas as pd
 import matplotlib.pyplot as plt
 from analysis import analyse_connections, analyse_messages, analyse_invitations, count_messages, add_connection_direction
 from langchain_experimental.agents import create_pandas_dataframe_agent
-from langchain.llms import VertexAI
-#import json
+from langchain_community.llms import VertexAI
 
-#from google.oauth2 import service_account
-
-# Load the credentials from Streamlit's secrets
-#creds_json = json.loads(st.secrets["google_credentials"])
-#credentials = service_account.Credentials.from_service_account_info(creds_json)
-
-#import vertexai
-#from vertexai.generative_models import GenerativeModel, Part, FinishReason
-#import vertexai.preview.generative_models as generative_models
-
-
-llm = VertexAI(model_name="text-bison@001", temperature=0)
+llm = VertexAI(model_name="gemini-1.5-pro-preview-0409", temperature=0.2)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -26,51 +15,45 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-@st.cache_data
-def load_data(uploaded_files):
+def find_data_start(file, key_column='First Name'):
     """
-    Load and concatenate multiple CSV files into a dictionary of dataframes.
+    Dynamically find the starting row of actual data in a CSV file.
 
     Parameters:
-    uploaded_files (iterable): An iterable of uploaded file objects (from Streamlit).
+    file (file-like object): The CSV file to scan.
+    key_column (str): The expected header name of the first column of the data.
 
     Returns:
-    dict: A dictionary where each key is the file name (without extension) and value is the dataframe.
+    int: The index of the row to be used as the header (0-based).
     """
+    # Attempt to read the file incrementally until the key column is found
+    for skip_rows in range(10):  # Adjust range based on max expected preamble length
+        file.seek(0)  # Reset file pointer to the start of the file for each attempt
+        try:
+            df = pd.read_csv(file, skiprows=skip_rows, nrows=1)
+            if key_column in df.columns:
+                return skip_rows
+        except pd.errors.EmptyDataError:
+            continue
+    raise ValueError(f"Unable to find data start; '{key_column}' not found in the first 10 rows.")
+
+@st.cache_data
+def load_data(uploaded_files):
     data_frames = {}
     for file in uploaded_files:
         key = file.name.split('/')[-1].split('.')[0].lower()
         try:
-            # Attempt to identify the header row
             if key =="connections":
-                header_row = find_header_row(file, expected_column_name='First Name')
+                header_row = find_data_start(file, 'First Name')
+                file.seek(0)  # Reset file position after finding header
             else:
                 header_row = 0
-            file.seek(0)  # Reset file read position after checking rows
-            df = pd.read_csv(file, delimiter=',', on_bad_lines='skip', header=header_row)
+            df = pd.read_csv(file, skiprows=header_row)
         except Exception as e:
-            st.error(f"Failed to read {key}: {e}")  # Display error in Streamlit
+            st.error(f"Failed to read {key}: {e}")
             continue
         data_frames[key] = df
     return data_frames
-
-def find_header_row(file, expected_column_name='First Name'):
-    """
-    Attempts to determine the header row index by looking for a specific column name.
-    
-    Parameters:
-    file (file-like object): The file to scan for the header.
-    expected_column_name (str): The name of the first expected column header.
-
-    Returns:
-    int: The index of the row to be used as the header.
-    """
-    import csv
-    reader = csv.reader(file)
-    for index, row in enumerate(reader):
-        if expected_column_name in row:
-            return index
-    raise ValueError(f"Header with column name '{expected_column_name}' not found.")
 
 
 def main():
