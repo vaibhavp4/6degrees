@@ -4,6 +4,14 @@ import matplotlib.pyplot as plt
 from analysis import analyse_connections, analyse_messages, analyse_invitations, count_messages, add_connection_direction
 from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain.llms import VertexAI
+import json
+
+from google.oauth2 import service_account
+
+# Load the credentials from Streamlit's secrets
+creds_json = json.loads(st.secrets["google_credentials"])
+credentials = service_account.Credentials.from_service_account_info(creds_json)
+
 
 if "gemini_model" not in st.session_state:
     st.session_state["gemini_model"] = "gemini-ultra-pro"
