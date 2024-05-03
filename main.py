@@ -1,30 +1,33 @@
 import streamlit as st
-import io
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 from analysis import analyse_connections, analyse_messages, analyse_invitations, count_messages, add_connection_direction
 from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain_community.llms import VertexAI
-import base64
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part, FinishReason
-import vertexai.preview.generative_models as generative_models
-
-from google.oauth2 import service_account
 import json
+import tempfile
 
 # Initialize Google Cloud credentials
-def init_google_credentials():
-    creds_json = json.loads(st.secrets["google_credentials"])
-    credentials = service_account.Credentials.from_service_account_info(creds_json)
-    return credentials
+def create_temp_creds_file(credentials_json):
+    # Create a temporary file to store the credentials
+    _, path = tempfile.mkstemp(suffix='.json')  # Creates a temp file and returns its path
+    with open(path, 'w') as temp_file:
+        json.dump(credentials_json, temp_file)  # Write the JSON data to the temp file
+    
+    return path
 
-# Use credentials in VertexAI or other Google Cloud services
-credentials = init_google_credentials()
-vertexai.init(project="snappy-topic-422116-h1",  location="europe-west2", credentials=credentials)
+# Load credentials from Streamlit secrets
+creds_json = json.loads(st.secrets["google_credentials"])
+
+# Create a temporary credentials file and get the path
+temp_creds_path = create_temp_creds_file(creds_json)
+
+# Set the GOOGLE_APPLICATION_CREDENTIALS environment variable
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = temp_creds_path
 
 
-llm = VertexAI(model_name="gemini-1.5-pro-preview-0409", temperature=0.2)
+llm = VertexAI(model_name="gemini-1.0-pro-vision-001", temperature=0.2)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -120,56 +123,14 @@ def main():
             
             if st.button("Analyze"):
 
-                
-
-                def generate():
-                    vertexai.init(project="snappy-topic-422116-h1", location="europe-west2")
-                    model = GenerativeModel("gemini-1.5-pro-preview-0409")
-                    responses = model.generate_content(
-                        [text1],
-                        generation_config=generation_config,
-                        safety_settings=safety_settings,
-                        stream=True,
-                    )
-
-                    for response in responses:
-                        st.write(response.text, end="")
-
-                text1 = """We have access to LinkedIn connections of a user. Our goal is to help the user get meaningful insights based on their request.
-
-                Here is their request:current role: Foundercurrent objective: To get new clientsIdeal customer profile: Ed-tech companies
-
-                Suggest 3 questions or insights areas that we can explore from their LinkedIn data to help them achieve their objective
-
-                Here are the rules:- The questions should be precise and non-overlapping- The questions should be answerable by analysing only the CSV containing the following columns: First Name, Last Name, URL, Email Address, Company, Position, Connected On, Messages count, Team, Industry"""
-
-                generation_config = {
-                    "max_output_tokens": 8192,
-                    "temperature": 0.7,
-                    "top_p": 0.95,
-                }
-
-                safety_settings = {
-                    generative_models.HarmCategory.HARM_CATEGORY_HATE_SPEECH: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                    generative_models.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                    generative_models.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                    generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                }
-
-                generate()
-
-
-                
-                '''
-                agent = create_pandas_dataframe_agent(llm, connections, agent_type="openai-tools", verbose=True)
+                agent = create_pandas_dataframe_agent(llm, connections, verbose=True)
                 
                 output = agent.invoke(
                     {
                         "input": objective
                     }
                 )
-                st.write(output) 
-                '''          
+                st.write(output)      
                 
 
 if __name__ == "__main__":
