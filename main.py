@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from analysis import analyse_connections, analyse_messages, analyse_invitations, count_messages, add_connection_direction
 from langchain_experimental.agents import create_pandas_dataframe_agent
-from langchain_community.llms import VertexAI
+from langchain_google_vertexai import VertexAI
 import json
 import tempfile
 
