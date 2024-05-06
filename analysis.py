@@ -107,11 +107,20 @@ def analyse_connections(df):
     return graphs
 
 
-def analyse_messages(df):
-    # TODO: implement function to analyse messages
-    pass
-
-def analyse_invitations(df):
-    # TODO: implement function to analyse invitations
-    pass
-
+def goal_to_analysis(goal):
+    if goal == "Finding new clients":
+        return ['How many companies in my network match the ideal industry, and when did I connect with them?', 'Who are the least messaged high-potential connections in this industry?', 'Who are the key decision makers in this industry that I should speak to in my network?']
+    elif goal ==  "Recruit new talent":
+        return ['How many people do I have in my network that work in my ideal industry and when did I connect with them?', 'Who are the connections that work in my ideal industry that I have previously messaged?', 'What are the distribution of roles within my ideal industry?']
+    elif goal == "Find investors":
+        return ['How many investors do I have in my network and when did I connect with them?', 'Who are top investors in my network that I have messaged the most?', 'Who are the investors in my network that I have not messaged?']
+    elif goal == "Find a new job":
+        return ['How many people in my network match the ideal industry, and when did I connect with them?', 'Who are the people I have messaged the most in this industry?', 'What are the distribution of roles within my ideal industry?']
+    elif goal == "Grow your community":
+        return ['What are the distribution of roles within my ideal industry?', 'Who are the key decision makers in this industry that I should speak to in my network?', 'Who are the connections that work in my ideal industry that I have previously messaged?']
+    elif goal == "Strengthen Partnerships":
+        return ['Who are the least messaged high-potential connections within my ideal industry?', 'Who are the key decision makers in this industry that I should speak to in my network?', 'Who are the people I have messaged the most frequently, but not messged them recently in the last 3 months?']
+    elif goal == "Build Distribution channels":
+        return ['How many companies in my network match the ideal industry, and when did I connect with them?', 'Who are the connections that work in my ideal industry that I have previously messaged?', 'Who are the key decision makers in this industry that I should speak to in my network?']
+    else:
+        return []
