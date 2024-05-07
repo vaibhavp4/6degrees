@@ -178,7 +178,7 @@ def main():
                 with tab3:
                     st.subheader("Chat With Your Network Data")
                     objective = st.text_input("What do you want to know?", "E.g. Which connections could introduce me to fintech clients?")
-                    if st.button("Analyze"):
+                    if st.button("Submit query"):
                         with st.spinner('Analyzing your query...'):
                             agent = create_pandas_dataframe_agent(llm, st.session_state.data_frames['connections'], verbose=True)
                             output = agent.invoke({"input": objective})
