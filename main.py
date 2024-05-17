@@ -59,7 +59,6 @@ def load_data(uploaded_files):
     return data_frames
 
 def main():
-    st.title('6degrees Network Analysis')
     st.subheader('Upload your LinkedIn data to get started!')
     uploaded_files = st.file_uploader("Upload CSV files downloaded from LinkedIn (your data is not saved)", accept_multiple_files=True, type='csv')
 
@@ -137,6 +136,7 @@ if __name__ == "__main__":
     supabase_url = st.secrets["SUPABASE_URL"]
     supabase_api_key = st.secrets["SUPABASE_KEY"]
 
+    st.title('6degrees Network Analysis')
     session = login_form(
         url=supabase_url,
         apiKey=supabase_api_key,
