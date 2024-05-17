@@ -10,6 +10,7 @@ import tempfile
 import time
 import plotly.graph_objects as go
 from streamlit_supabase_auth import login_form, logout_button
+import streamlit_analytics
 
 # Function to create temporary credentials file for Google Cloud
 def create_temp_creds_file(credentials_json):
@@ -62,74 +63,75 @@ def main():
     st.subheader('Upload your LinkedIn data to get started!')
     uploaded_files = st.file_uploader("Upload CSV files downloaded from LinkedIn (your data is not saved)", accept_multiple_files=True, type='csv')
 
-    if uploaded_files:
-        if 'data_frames' not in st.session_state:
-            with st.spinner('Loading data...'):
-                st.session_state.data_frames = load_data(uploaded_files)
-                time.sleep(1)
-            st.success('Data successfully loaded!')
+    with streamlit_analytics.track(unsafe_password="zillsER45£@^"):
+        if uploaded_files:
+            if 'data_frames' not in st.session_state:
+                with st.spinner('Loading data...'):
+                    st.session_state.data_frames = load_data(uploaded_files)
+                    time.sleep(1)
+                st.success('Data successfully loaded!')
 
-    if 'data_frames' in st.session_state:
-        st.header("Define Your Objective")
-        goal = st.radio("What is your goal?", 
-                        ["Finding new clients", 
-                         "Recruit new talent", 
-                         "Find investors", 
-                         "Find a new job", 
-                         "Grow your community", 
-                         "Strengthen Partnerships", 
-                         "Build Distribution channels"], 
-                        index=0, 
-                        help="Select your goal to tailor the analysis.")
-        
-        details = st.text_input("Details about your goal - specify industry or role", "E.g. <Fintech> or <Product leader>")
-        
-        st.button('Analyse', on_click=lambda: st.session_state.update({'clicked': True}))
+        if 'data_frames' in st.session_state:
+            st.header("Define Your Objective")
+            goal = st.radio("What is your goal?", 
+                            ["Finding new clients", 
+                            "Recruit new talent", 
+                            "Find investors", 
+                            "Find a new job", 
+                            "Grow your community", 
+                            "Strengthen Partnerships", 
+                            "Build Distribution channels"], 
+                            index=0, 
+                            help="Select your goal to tailor the analysis.")
+            
+            details = st.text_input("Details about your goal - specify industry or role", "E.g. <Fintech> or <Product leader>")
+            
+            st.button('Analyse', on_click=lambda: st.session_state.update({'clicked': True}))
 
-        if st.session_state.get('clicked'):
-            st.info(f"Goal selected: {goal}, details: {details}")
-            st.header("Network Insights")
-            tab1, tab2, tab3 = st.tabs(["Overview", "Insights", "Ask a question"])
+            if st.session_state.get('clicked'):
+                st.info(f"Goal selected: {goal}, details: {details}")
+                st.header("Network Insights")
+                tab1, tab2, tab3 = st.tabs(["Overview", "Insights", "Ask a question"])
 
-            with tab1:
-                st.subheader("Connections Overview")
-                with st.spinner('Analyzing connections...'):
-                    graphs = analyse_connections(st.session_state.data_frames['connections'])
-                for title, graph in graphs.items():
-                    st.plotly_chart(graph, use_container_width=True)
+                with tab1:
+                    st.subheader("Connections Overview")
+                    with st.spinner('Analyzing connections...'):
+                        graphs = analyse_connections(st.session_state.data_frames['connections'])
+                    for title, graph in graphs.items():
+                        st.plotly_chart(graph, use_container_width=True)
 
-            with tab2:
-                st.subheader("Insights Based On Your Goal")
-                agent = create_pandas_dataframe_agent(llm, st.session_state.data_frames['connections'], verbose=True)
-                tasks = goal_to_analysis(goal)
-                for task in tasks:
-                    st.subheader(task)
-                    user_query_graph = f'This is my goal: {goal} for industry/role: {details}. Write code for plotly graph to analyse {task}'
-                    user_query = f'This is my goal: {goal} for industry/role: {details}. Your goal is to find {task}'
-                    
-                    with st.spinner("Running agent..."):
-                        time.sleep(10)
-                    analysis =  agent.invoke({"input": user_query})
-                    st.write(analysis)
-                    
-                    with st.spinner("Running agent..."):
-                        time.sleep(10)
-                    plotly_code = agent.invoke({"input": user_query_graph})
-                    local_vars = {}
-                    exec(plotly_code, {'go': go}, local_vars)
-                    fig = local_vars.get('fig')
-                    if fig:
-                        st.plotly_chart(fig, use_container_width=True)
+                with tab2:
+                    st.subheader("Insights Based On Your Goal")
+                    agent = create_pandas_dataframe_agent(llm, st.session_state.data_frames['connections'], verbose=True)
+                    tasks = goal_to_analysis(goal)
+                    for task in tasks:
+                        st.subheader(task)
+                        user_query_graph = f'This is my goal: {goal} for industry/role: {details}. Write code for plotly graph to analyse {task}'
+                        user_query = f'This is my goal: {goal} for industry/role: {details}. Your goal is to find {task}'
+                        
+                        with st.spinner("Running agent..."):
+                            time.sleep(10)
+                        analysis =  agent.invoke({"input": user_query})
+                        st.write(analysis)
+                        
+                        with st.spinner("Running agent..."):
+                            time.sleep(10)
+                        plotly_code = agent.invoke({"input": user_query_graph})
+                        local_vars = {}
+                        exec(plotly_code, {'go': go}, local_vars)
+                        fig = local_vars.get('fig')
+                        if fig:
+                            st.plotly_chart(fig, use_container_width=True)
 
-            with tab3:
-                st.subheader("Chat With Your Network Data")
-                objective = st.text_input("What do you want to know?", "E.g. Which connections could introduce me to fintech clients?")
-                if st.button("Submit query"):
-                    with st.spinner('Analyzing your query...'):
-                        agent = create_pandas_dataframe_agent(llm, st.session_state.data_frames['connections'], verbose=True)
-                        output = agent.invoke({"input": objective})
-                    st.success("Analysis complete!")
-                    st.write(output)
+                with tab3:
+                    st.subheader("Chat With Your Network Data")
+                    objective = st.text_input("What do you want to know?", "E.g. Which connections could introduce me to fintech clients?")
+                    if st.button("Submit query"):
+                        with st.spinner('Analyzing your query...'):
+                            agent = create_pandas_dataframe_agent(llm, st.session_state.data_frames['connections'], verbose=True)
+                            output = agent.invoke({"input": objective})
+                        st.success("Analysis complete!")
+                        st.write(output)
 
 if __name__ == "__main__":
     # Retrieve secrets
